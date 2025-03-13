@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar CSV</title>
+</head>
+<body>
+    <h1>Carregar e Filtrar CSV</h1>
+    <input type="file" id="abrir" accept=".csv">
+    <br><br>
+    
+    <label for="coluna">Filtrar por coluna:</label>
+    <select id="coluna">
+        <!-- As opções serão geradas dinamicamente -->
+    </select>
+    <input type="text" id="filtro" placeholder="Filtrar valor">
+    <button onclick="filtrarCSV()">Filtrar</button>
+    
+    <br><br>
+    
+    <table id="tabela">
+        <caption>Tabela de Dados CSV</caption>
+        <thead>
+            <tr>
+                <!-- Colunas serão geradas dinamicamente -->
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Linhas serão geradas dinamicamente -->
+        </tbody>
+    </table>
+
+    <script>
+        let dadosCSV = [];
+
+        // Evento para quando o usuário carregar o arquivo CSV
+        document.getElementById("abrir").addEventListener("change", (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const fileName = file.name.toLowerCase();
+                const fileType = file.type.toLowerCase();
+
+                // Verificando a extensão e tipo do arquivo
+                if (fileType === "text/csv" || fileName.endsWith(".csv")) {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const texto = reader.result;
+                        dadosCSV = parseCSV(texto);
+                        exibirTabela(dadosCSV);
+                        atualizarFiltro(dadosCSV); // Atualiza a lista de colunas para filtragem
+                    };
+                    reader.readAsText(file);
+                } else {
+                    alert("Por favor, selecione um arquivo CSV válido.");
+                }
+            }
+        });
+
+        // Função para fazer o parse do CSV para um array de objetos (usando ponto e vírgula como separador)
+        function parseCSV(texto) {
+            const linhas = texto.split("\n").filter(linha => linha.trim() !== "");
+            const cabecalho = linhas[0].split(";").map(col => col.trim()); // Usando ponto e vírgula
+            const dados = linhas.slice(1).map(linha => {
+                const valores = linha.split(";").map(val => val.trim()); // Usando ponto e vírgula
+                let objeto = {};
+                cabecalho.forEach((coluna, index) => {
+                    objeto[coluna] = valores[index] || ""; // Valor vazio se não houver correspondente
+                });
+                return objeto;
+            });
+            return dados;
+        }
+
+        // Função para exibir os dados na tabela
+        function exibirTabela(dados) {
+            const tabela = document.getElementById("tabela");
+            const cabecalho = tabela.querySelector("thead tr");
+            const corpo = tabela.querySelector("tbody");
+
+            // Limpar tabela
+            cabecalho.innerHTML = "";
+            corpo.innerHTML = "";
+
+            if (dados.length > 0) {
+                const colunas = Object.keys(dados[0]);
+
+                // Criar cabeçalho da tabela
+                colunas.forEach(coluna => {
+                    const th = document.createElement("th");
+                    th.textContent = coluna;
+                    cabecalho.appendChild(th);
+                });
+
+                // Criar as linhas da tabela
+                dados.forEach(linha => {
+                    const tr = document.createElement("tr");
+                    colunas.forEach(coluna => {
+                        const td = document.createElement("td");
+                        td.textContent = linha[coluna];
+                        tr.appendChild(td);
+                    });
+                    corpo.appendChild(tr);
+                });
+            } else {
+                corpo.innerHTML = "<tr><td colspan='100%' style='text-align:center;'>Nenhum dado encontrado.</td></tr>";
+            }
+        }
+
+        // Atualizar o filtro de coluna dinamicamente com base nas colunas do CSV
+        function atualizarFiltro(dados) {
+            const colunaSelect = document.getElementById("coluna");
+            colunaSelect.innerHTML = ""; // Limpar as opções existentes
+
+            const colunas = Object.keys(dados[0]);
+            colunas.forEach((coluna, index) => {
+                const option = document.createElement("option");
+                option.value = index;
+                option.textContent = coluna;
+                colunaSelect.appendChild(option);
+            });
+        }
+
+        // Função de filtragem
+        function filtrarCSV() {
+            const colunaIndex = parseInt(document.getElementById("coluna").value, 10);
+            const filtro = document.getElementById("filtro").value.toLowerCase();
+
+            if (isNaN(colunaIndex) || colunaIndex < 0) {
+                alert("Por favor, selecione uma coluna válida.");
+                return;
+            }
+
+            // Filtrando os dados com base na coluna e no valor
+            const dadosFiltrados = dadosCSV.filter(linha => {
+                const valor = Object.values(linha)[colunaIndex];
+                return valor && valor.toLowerCase().includes(filtro);
+            });
+
+            exibirTabela(dadosFiltrados);
+        }
+    </script>
+</body>
+</html>
